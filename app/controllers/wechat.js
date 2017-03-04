@@ -35,6 +35,39 @@ const handleWechatRequest = wechat(config, function (req, res, next) {
 
     res.reply('hello');
 });
+const handleUserSync = function (req, res, next) {
+    if (!req.query.openid) {
+        return next();
+    }
 
+    const openid = req.query.openid;
+    User.findOne({ openid }).exec(function (err, user) {
+        if (err) {
+            return next(err);
+        }
+
+        if (user) {
+            console.log(`use existing user: ${openid}`);
+            req.user = user;
+            return next();
+        }
+
+        console.log(`create new user: ${openid}`);
+        const newUser = new User({
+            openid: openid,
+            createdAt: new Date(),
+            conversationCount: 0
+        });
+
+        newUser.save(function (e, u) {
+            if (e) {
+                return next(e);
+            }
+
+            req.user = u;
+            next();
+        });
+    });
+};
 router.get('/conversation', handleWechatRequest);
-router.post('/conversation', handleWechatRequest);
+router.post('/conversation', handleUserSync, handleWechatRequest);
