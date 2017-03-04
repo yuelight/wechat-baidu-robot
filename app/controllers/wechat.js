@@ -2,21 +2,25 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const wechat = require('wechat');
-const Article = mongoose.model('Article');
+
+const jssdk = require('../libs/jssdk');
 
 module.exports = function (app) {
     app.use('/wechat', router);
 };
 
-router.get('/hello', function (req, res, next) {
-    Article.find(function (err, articles) {
-        if (err) return next(err);
+router.get('/hello', function(req, res, next) {
+    jssdk.getSignPackage(`http://120.27.99.227${req.url}`, function (err, signPackage) {
+        if (err) {
+            return next(err);
+        }
+
         res.render('index', {
-          title: 'Generator-Express MVC',
-          articles: articles
+            title: 'Hello Wechat from Aliyun ECS --> Express'
         });
     });
 });
+
 const config = {
     token: 'dmIKhkJ65yZ4cdLGWU40',
     appid: 'wx24ed2d4b06ace0fe'

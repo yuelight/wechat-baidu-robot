@@ -20,6 +20,7 @@
     "method-override": "^2.3.0",
     "mongoose": "^4.1.2",
     "morgan": "^1.6.1",
+    "request": "^2.79.0",
     "serve-favicon": "^2.3.0",
     "wechat": "^2.1.0"
   },

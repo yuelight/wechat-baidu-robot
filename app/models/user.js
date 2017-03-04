@@ -1,5 +1,3 @@
-// Example model
-
 var mongoose = require('mongoose'),
   Schema = mongoose.Schema;
 
@@ -10,7 +8,7 @@ var UserSchema = new Schema({
     },
     createdAt: {
         type: Date,
-        reqyured: '`createdAt`是必填参数'
+        required: '`createdAt`是必填参数'
     },
     conversationCount: {
         type: Number,
@@ -19,4 +17,3 @@ var UserSchema = new Schema({
 });
 
 mongoose.model('User', UserSchema);
-
