@@ -147,7 +147,7 @@ module.exports = jssdk;
 // debug(jssdk.createNonceStr());
 //
 //
-// jssdk.getSignPackage('http://120.27.99.227/wechat/hello', function (err, accessToken) {
+// jssdk.getSignPackage('http://www.lyuelight.com/wechat/hello', function (err, accessToken) {
 //     console.log(arguments);
 // });
 //

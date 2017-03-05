@@ -5,31 +5,37 @@ const wechat = require('wechat');
 const cheerio = require('cheerio');
 const request = require('request');
 const moment = require('moment');
+const lodash = require('lodash');
 const User = mongoose.model('User');
 const Conversation = mongoose.model('Conversation');
 
 const jssdk = require('../libs/jssdk');
-const baseUrl = 'http://120.27.99.227';
+const baseUrl = 'http://www.lyuelight.com';
 
 module.exports = function (app) {
     app.use('/wechat', router);
 };
 
-router.get('/hello', function (req, res, next) {
-    jssdk.getSignPackage(`${baseUrl}${req.url}`, function (err, signPackage) {
+const getSignPackage = function (req, res, next) {
+    jssdk.getSignPackage(`${baseUrl}${req.originalUrl}`, function (err, signPackage) {
         if (err) {
             return next(err);
         }
 
-        res.render('index', {
-            title: 'Hello Wechat from Aliyun ECS --> Express',
-            signPackage: signPackage,
-            pretty: true
-        });
+        req.signPackage = signPackage;
+        next();
+    });
+};
+
+router.get('/hello', getSignPackage, function (req, res, next) {
+    res.render('index', {
+        title: 'Hello Wechat from Aliyun ECS --> Express',
+        signPackage: req.signPackage,
+        pretty: true
     });
 });
 
-router.get('/history/:userid', function (req, res, next) {
+router.get('/history/:userid', getSignPackage, function (req, res, next) {
     if (!req.params.userid) {
         return next(new Error('非法请求，缺少userid参数'));
     }
@@ -40,7 +46,7 @@ router.get('/history/:userid', function (req, res, next) {
         }
 
         console.log(`find user: ${user}`);
-        Conversation.find({ user  }).exec(function (e, conversations) {
+        Conversation.find({ user  }).sort('-createdAt').limit(20).exec(function (e, conversations) {
             if (e) {
                 return next(new Error('查找问答历史出错'));
             }
@@ -49,9 +55,26 @@ router.get('/history/:userid', function (req, res, next) {
                 title: '问答历史',
                 user: user,
                 conversations: conversations,
+                signPackage: req.signPackage,
                 moment: moment,
                 pretty: true
             });
+        });
+    });
+});
+
+router.get('/random', getSignPackage, function (req, res, next) {
+    Conversation.find().limit(100).exec(function (e, conversations) {
+        if (e) {
+            return next(new Error('查找问答历史出错'));
+        }
+
+        res.render('history', {
+            conversations: lodash.shuffle(conversations).slice(0, 20),
+            moment: moment,
+            title: '随机问答',
+            signPackage: req.signPackage,
+            pretty: true
         });
     });
 });
@@ -62,7 +85,8 @@ const config = {
 };
 
 // 只处理文本消息
-const handleWechatTextMessage = function (req, res, next, message) {
+const handleWechatTextMessage = function (req, res, next) {
+    const message = req.weixin;
     if (!message.Content) {
         return res.reply('你没有提出任何问题');
     }
@@ -136,7 +160,7 @@ const handleWechatRequest = wechat(config, function (req, res, next) {
     console.log(message);
     
     if (message.MsgType === 'text') {
-        handleWechatTextMessage(req, res, next, message);
+        handleWechatTextMessage(req, res, next);
     } else if (message.MsgType === 'event') {
         handleWechatEventMessage(req, res, next);
     } else {

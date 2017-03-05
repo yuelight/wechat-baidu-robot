@@ -10,7 +10,7 @@ block javascript
     script.
         var signPackage = !{JSON.stringify(signPackage)};
         wx.config({
-            debug: true,
+            debug: false,
             appId: signPackage.appId,
             timestamp: signPackage.timestamp,
             nonceStr: signPackage.nonceStr,
