@@ -2,7 +2,10 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const wechat = require('wechat');
+const cheerio = require('cheerio');
+const request = require('request');
 const User = mongoose.model('User');
+const Conversation = mongoose.model('Conversation');
 
 const jssdk = require('../libs/jssdk');
 
@@ -33,7 +36,59 @@ const handleWechatRequest = wechat(config, function (req, res, next) {
     const message = req.weixin;
     console.log(message);
 
-    res.reply('hello');
+    if (message.MsgType !== 'text') {
+        return res.reply('无法处理的消息类型');
+    }
+
+    if (!message.Content) {
+        return res.reply('你没有提出任何问题');
+    }
+
+    request.get({
+        url: `https://www.baidu.com/s?word=${encodeURIComponent(message.Content)}`,
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'
+        }
+    }, function (err, response, body) {
+        if (err) {
+            console.error(err);
+            return res.reply('寻找答案时发生错误');
+        }
+
+        const $ = cheerio.load(body);
+        const results = $('.result.c-container');
+
+        if (results.length === 0) {
+            return res.reply('没有找到任何答案');
+        }
+
+        const result = $(results.get(0));
+        const answer = result.find('.c-abstract').text();
+
+        res.reply(answer ? answer : '找到了空答案');
+
+        // 保存回话历史
+        const conversation = new Conversation({
+            user: req.user,
+            question: message.Content,
+            answer: answer,
+            createdAt: new Date()
+        });
+
+        conversation.save(function (e, conversation) {
+            if (e) {
+                return console.error('conversation save error:', e);
+            }
+
+            // 更新回话次数
+            req.user.conversationCount += 1;
+            req.user.save(function (_e, u) {
+                if (_e) {
+                    return console.error('user save error:', e);
+                }
+            });
+        });
+    });
 });
 const handleUserSync = function (req, res, next) {
     if (!req.query.openid) {

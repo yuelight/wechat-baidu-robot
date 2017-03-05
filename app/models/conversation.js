@@ -3,21 +3,21 @@ var mongoose = require('mongoose'),
 
 var ConversationSchema = new Schema({
         user: {
-                type: Schema.ObjectId,
-                ref: 'User',
-                required: '`user`是必填字段'
+            type: Schema.ObjectId,
+            ref: 'User',
+            required: '`user`是必填字段'
         },
         question: {
-                type: String,
-                required: '`question`是必填参数'
+            type: String,
+            required: '`question`是必填参数'
         },
         answer: {
-                type: String,
-                default: ''
+            type: String,
+            default: ''
         },
         createdAt: {
-                type: Date,
-                required: '`createdAt`是必填参数'
+            type: Date,
+            required: '`createdAt`是必填参数'
         }
 });
 

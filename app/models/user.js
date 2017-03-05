@@ -3,16 +3,16 @@ var mongoose = require('mongoose'),
 
 var UserSchema = new Schema({
         openid: {
-                type: String,
-                required: '`openid`是必填参数'
+            type: String,
+            required: '`openid`是必填参数'
         },
         createdAt: {
-                type: Date,
-                required: '`createdAt`是必填参数'
+            type: Date,
+            required: '`createdAt`是必填参数'
         },
         conversationCount: {
-                type: Number,
-                default: 0
+            type: Number,
+            default: 0
         }
 });
 
