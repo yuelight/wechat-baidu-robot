@@ -4,17 +4,19 @@ const mongoose = require('mongoose');
 const wechat = require('wechat');
 const cheerio = require('cheerio');
 const request = require('request');
+const moment = require('moment');
 const User = mongoose.model('User');
 const Conversation = mongoose.model('Conversation');
 
 const jssdk = require('../libs/jssdk');
+const baseUrl = 'http://120.27.99.227';
 
 module.exports = function (app) {
     app.use('/wechat', router);
 };
 
 router.get('/hello', function (req, res, next) {
-    jssdk.getSignPackage(`http://120.27.99.227${req.url}`, function (err, signPackage) {
+    jssdk.getSignPackage(`${baseUrl}${req.url}`, function (err, signPackage) {
         if (err) {
             return next(err);
         }
@@ -27,19 +29,40 @@ router.get('/hello', function (req, res, next) {
     });
 });
 
+router.get('/history/:userid', function (req, res, next) {
+    if (!req.params.userid) {
+        return next(new Error('非法请求，缺少userid参数'));
+    }
+
+    User.findOne({ _id: req.params.userid }).exec(function (err, user) {
+        if (err || !user) {
+            return next(new Error('没有找到用户'));
+        }
+
+        console.log(`find user: ${user}`);
+        Conversation.find({ user  }).exec(function (e, conversations) {
+            if (e) {
+                return next(new Error('查找问答历史出错'));
+            }
+
+            res.render('history', {
+                title: '问答历史',
+                user: user,
+                conversations: conversations,
+                moment: moment,
+                pretty: true
+            });
+        });
+    });
+});
+
 const config = {
     token: 'dmIKhkJ65yZ4cdLGWU40',
     appid: 'wx24ed2d4b06ace0fe'
 };
 
-const handleWechatRequest = wechat(config, function (req, res, next) {
-    const message = req.weixin;
-    console.log(message);
-
-    if (message.MsgType !== 'text') {
-        return res.reply('无法处理的消息类型');
-    }
-
+// 只处理文本消息
+const handleWechatTextMessage = function (req, res, next, message) {
     if (!message.Content) {
         return res.reply('你没有提出任何问题');
     }
@@ -89,7 +112,39 @@ const handleWechatRequest = wechat(config, function (req, res, next) {
             });
         });
     });
+};
+
+// 处理事件消息
+const handleWechatEventMessage = function (req, res, next) {
+    const message = req.weixin;
+    const event = message.Event;
+    const eventKey = message.EventKey;
+
+    if (event === 'CLICK') {
+        if (eventKey === 'conversation-history') {
+            res.reply(`${baseUrl}/wechat/history/${req.user._id.toString()}`);
+        } else {
+            res.reply('无法处理的事件类型');
+        }
+    } else {
+        res.reply('无法处理的事件类型');
+    }
+};
+
+const handleWechatRequest = wechat(config, function (req, res, next) {
+    const message = req.weixin;
+    console.log(message);
+    
+    if (message.MsgType === 'text') {
+        handleWechatTextMessage(req, res, next, message);
+    } else if (message.MsgType === 'event') {
+        handleWechatEventMessage(req, res, next);
+    } else {
+        res.reply('无法处理的消息类型');
+    }
+
 });
+
 const handleUserSync = function (req, res, next) {
     if (!req.query.openid) {
         return next();
